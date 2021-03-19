@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+require_relative "analysis"
+require_relative "class_reference"
+require_relative "namespace"
+
 module AnalyzeProject
   class BuildAnalysis
     def initialize
@@ -46,15 +50,15 @@ module AnalyzeProject
       if body_tree
         analyze_tree(
           file_and_ast.focus(body_tree.drop(1).first),
-          parent_namespace: parent_namespace
+          parent_namespace: namespace
         )
       end
 
       if parent_namespace
-        add_reference(
+        @analysis.add_reference(
           ClassReference.new(
             namespace.full_identifier,
-            parent_namespace.full_identifier,
+            parent_namespace&.full_identifier,
             :nested_in
           )
         )

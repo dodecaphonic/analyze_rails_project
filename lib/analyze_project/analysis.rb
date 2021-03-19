@@ -7,6 +7,8 @@ module AnalyzeProject
       @references = []
     end
 
+    attr_reader :namespaces, :references
+
     def add_reference(reference)
       @references << reference
     end
