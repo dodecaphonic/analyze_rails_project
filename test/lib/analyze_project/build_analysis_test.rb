@@ -89,5 +89,23 @@ module AnalyzeProject
       assert_equal("Bar", reference.to_klass)
       assert_equal(:subclass_of, reference.type)
     end
+
+    def test_includes_generate_included_in_references
+      sexp = RubyFileAST.new("foo.rb", Ripper.sexp("class Foo; include Bar; include Baz; end")[1])
+      analysis = BuildAnalysis.new.call([sexp])
+
+      assert(analysis.references.size == 2)
+
+      first_reference = analysis.references[0]
+      second_reference = analysis.references[1]
+
+      assert_equal("Foo", first_reference.from_klass)
+      assert_equal("Bar", first_reference.to_klass)
+      assert_equal(:includes, first_reference.type)
+
+      assert_equal("Foo", second_reference.from_klass)
+      assert_equal("Baz", second_reference.to_klass)
+      assert_equal(:includes, second_reference.type)
+    end
   end
 end

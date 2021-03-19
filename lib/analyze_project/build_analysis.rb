@@ -52,6 +52,8 @@ module AnalyzeProject
           file_and_ast.focus(body_tree.drop(1).first),
           parent_namespace: namespace
         )
+
+        analyze_includes(namespace, file_and_ast.focus(body_tree))
       end
 
       if parent_namespace
@@ -84,6 +86,26 @@ module AnalyzeProject
 
     def classes_and_modules_from(tree)
       tree.select { |node| %i[module class].member?(node.first) }
+    end
+
+    def analyze_includes(namespace, file_and_ast)
+      _, body = file_and_ast.tree
+
+      body.each do |node|
+        case node
+        in [:command,
+            [:@ident, "include", _],
+            [:args_add_block, [[:var_ref, [:@const, ref, _]]], _]]
+          @analysis.add_reference(
+            ClassReference.new(
+              namespace.full_identifier,
+              ref,
+              :includes
+            )
+          )
+        else
+        end
+      end
     end
   end
 end
