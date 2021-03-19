@@ -6,6 +6,7 @@ require_relative "analyze_project/analysis"
 require_relative "analyze_project/build_analysis"
 require_relative "analyze_project/ruby_file_ast"
 require_relative "analyze_project/project_path_to_asts"
+require_relative "analyze_project/graph_analysis"
 
 module AnalyzeProject
   module_function def analyze(path)

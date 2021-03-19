@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-gem "graph"
+gem "ruby-graphviz"
 
 group :development do
   gem "rubocop", require: false
