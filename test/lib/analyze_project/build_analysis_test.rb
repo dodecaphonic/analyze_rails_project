@@ -107,5 +107,53 @@ module AnalyzeProject
       assert_equal("Baz", second_reference.to_klass)
       assert_equal(:includes, second_reference.type)
     end
+
+    def test_belongs_to_generates_belongs_to_reference
+      source = <<-RUBY
+        class FooModel < ApplicationRecord
+          belongs_to :bar
+        end
+      RUBY
+
+      sexp = RubyFileAST.new("foo.rb", Ripper.sexp(source)[1])
+      analysis = BuildAnalysis.new.call([sexp])
+      reference = analysis.references.find { |r| r.to_klass == "Bar" }
+
+      assert_equal("FooModel", reference.from_klass)
+      assert_equal("Bar", reference.to_klass)
+      assert_equal(:belongs_to, reference.type)
+    end
+
+    def test_belongs_to_prefers_class_name_if_present
+      source = <<-RUBY
+        class FooModel < ApplicationRecord
+          belongs_to :client, class_name: "Person", flang: flong
+        end
+      RUBY
+
+      sexp = RubyFileAST.new("foo.rb", Ripper.sexp(source)[1])
+      analysis = BuildAnalysis.new.call([sexp])
+      reference = analysis.references.find { |r| r.to_klass == "Person" }
+
+      assert_equal("FooModel", reference.from_klass)
+      assert_equal("Person", reference.to_klass)
+      assert_equal(:belongs_to, reference.type)
+    end
+
+    def test_belongs_to_prefers_class_name_in_hash_rocket_if_present
+      source = <<-RUBY
+        class FooModel < ApplicationRecord
+          belongs_to :client, "class_name" => "Person", flang: flong
+        end
+      RUBY
+
+      sexp = RubyFileAST.new("foo.rb", Ripper.sexp(source)[1])
+      analysis = BuildAnalysis.new.call([sexp])
+      reference = analysis.references.find { |r| r.to_klass == "Person" }
+
+      assert_equal("FooModel", reference.from_klass)
+      assert_equal("Person", reference.to_klass)
+      assert_equal(:belongs_to, reference.type)
+    end
   end
 end

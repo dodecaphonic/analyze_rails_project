@@ -93,19 +93,78 @@ module AnalyzeProject
 
       body.each do |node|
         case node
-        in [:command,
-            [:@ident, "include", _],
-            [:args_add_block, [[:var_ref, [:@const, ref, _]]], _]]
-          @analysis.add_reference(
-            ClassReference.new(
-              namespace.full_identifier,
-              ref,
-              :includes
-            )
-          )
+        in [:command, [:@ident, cmd, _], args]
+          case cmd
+          in "include" then parse_include(namespace, args)
+          in "belongs_to" then parse_relationship(namespace, args, :belongs_to)
+          else
+          end
         else
         end
       end
+    end
+
+    def parse_include(namespace, args)
+      case args
+      in [:args_add_block, [[:var_ref, [:@const, ref, _]]], _]
+         @analysis.add_reference(
+           ClassReference.new(
+             namespace.full_identifier,
+             ref,
+             :includes
+           )
+         )
+      else
+      end
+    end
+
+    def parse_relationship(namespace, args, relationship)
+      case args
+      in [:args_add_block, [[:symbol_literal, [:symbol, [:@ident, ref, _]]]], _]
+        @analysis.add_reference(
+          ClassReference.new(
+            namespace.full_identifier,
+            constantize(ref),
+            relationship
+          )
+        )
+      in [:args_add_block, [[:symbol_literal, [:symbol, [:@ident, ref, _]]], other_args], _]
+        other_end = if other_args.is_a?(Array) && other_args.first == :bare_assoc_hash
+                      class_name_from_hash(other_args.last) || constantize(ref)
+                    else
+                      constantize(ref)
+                    end
+
+        @analysis.add_reference(
+          ClassReference.new(
+            namespace.full_identifier,
+            other_end,
+            relationship
+          )
+        )
+      else
+      end
+    end
+
+    def class_name_from_hash(bare_assoc_hash)
+      node = bare_assoc_hash.find do |n|
+        case n
+        in [:assoc_new, [:@label, label, _], _]
+          label
+        in [:assoc_new, [:string_literal, [:string_content, [_, label, _]]], _]
+          label
+        else
+          ""
+        end.match?(/class_name/)
+      end
+
+      return unless node
+
+      node.dig(2, 1, 1, 1)
+    end
+
+    def constantize(ref)
+      ref.split("_").map(&:capitalize).join
     end
   end
 end
