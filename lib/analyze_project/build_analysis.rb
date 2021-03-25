@@ -53,7 +53,7 @@ module AnalyzeProject
           parent_namespace: namespace
         )
 
-        analyze_includes(namespace, file_and_ast.focus(body_tree))
+        analyze_top_level_statements(namespace, file_and_ast.focus(body_tree))
       end
 
       if parent_namespace
@@ -88,7 +88,7 @@ module AnalyzeProject
       tree.select { |node| %i[module class].member?(node.first) }
     end
 
-    def analyze_includes(namespace, file_and_ast)
+    def analyze_top_level_statements(namespace, file_and_ast)
       _, body = file_and_ast.tree
 
       body.each do |node|
@@ -97,6 +97,7 @@ module AnalyzeProject
           case cmd
           in "include" then parse_include(namespace, args)
           in "belongs_to" then parse_relationship(namespace, args, :belongs_to)
+          in "has_many" then parse_relationship(namespace, args, :has_many)
           else
           end
         else
@@ -124,15 +125,15 @@ module AnalyzeProject
         @analysis.add_reference(
           ClassReference.new(
             namespace.full_identifier,
-            constantize(ref),
+            constantize(ref, to_singular: relationship == :has_many),
             relationship
           )
         )
       in [:args_add_block, [[:symbol_literal, [:symbol, [:@ident, ref, _]]], other_args], _]
         other_end = if other_args.is_a?(Array) && other_args.first == :bare_assoc_hash
-                      class_name_from_hash(other_args.last) || constantize(ref)
+                      class_name_from_hash(other_args.last) || constantize(ref, to_singular: relationship == :has_many)
                     else
-                      constantize(ref)
+                      constantize(ref, to_singular: relationship == :has_many)
                     end
 
         @analysis.add_reference(
@@ -147,8 +148,8 @@ module AnalyzeProject
     end
 
     def class_name_from_hash(bare_assoc_hash)
-      node = bare_assoc_hash.find do |n|
-        case n
+      node = bare_assoc_hash.find do |subnode|
+        case subnode
         in [:assoc_new, [:@label, label, _], _]
           label
         in [:assoc_new, [:string_literal, [:string_content, [_, label, _]]], _]
@@ -163,8 +164,21 @@ module AnalyzeProject
       node.dig(2, 1, 1, 1)
     end
 
-    def constantize(ref)
-      ref.split("_").map(&:capitalize).join
+    def constantize(ref, to_singular: false)
+      *initial, last = ref.split("_")
+      inflected_part = to_singular ? inflect(last) : last
+
+      [*initial, inflected_part].map(&:capitalize).join
+    end
+
+    def inflect(str)
+      if str.end_with?("ies")
+        str.sub(/ies\Z/, "y")
+      elsif str.end_with?("sses")
+        str.sub(/es\Z/, "")
+      else
+        str.sub(/s\Z/, "")
+      end
     end
   end
 end

@@ -155,5 +155,53 @@ module AnalyzeProject
       assert_equal("Person", reference.to_klass)
       assert_equal(:belongs_to, reference.type)
     end
+
+    def test_has_many_generates_has_many_relationship_simple_plural
+      source = <<-RUBY
+        class FooModel < ApplicationRecord
+          has_many :clients
+        end
+      RUBY
+
+      sexp = RubyFileAST.new("foo.rb", Ripper.sexp(source)[1])
+      analysis = BuildAnalysis.new.call([sexp])
+      reference = analysis.references.find { |r| r.to_klass == "Client" }
+
+      assert_equal("FooModel", reference.from_klass)
+      assert_equal("Client", reference.to_klass)
+      assert_equal(:has_many, reference.type)
+    end
+
+    def test_has_many_generates_has_many_relationship_es_plural
+      source = <<-RUBY
+        class FooModel < ApplicationRecord
+          has_many :masses
+        end
+      RUBY
+
+      sexp = RubyFileAST.new("foo.rb", Ripper.sexp(source)[1])
+      analysis = BuildAnalysis.new.call([sexp])
+      reference = analysis.references.find { |r| r.to_klass == "Mass" }
+
+      assert_equal("FooModel", reference.from_klass)
+      assert_equal("Mass", reference.to_klass)
+      assert_equal(:has_many, reference.type)
+    end
+
+    def test_has_many_generates_has_many_relationship_ies_plural
+      source = <<-RUBY
+        class FooModel < ApplicationRecord
+          has_many :casualties
+        end
+      RUBY
+
+      sexp = RubyFileAST.new("foo.rb", Ripper.sexp(source)[1])
+      analysis = BuildAnalysis.new.call([sexp])
+      reference = analysis.references.find { |r| r.to_klass == "Casualty" }
+
+      assert_equal("FooModel", reference.from_klass)
+      assert_equal("Casualty", reference.to_klass)
+      assert_equal(:has_many, reference.type)
+    end
   end
 end
